@@ -54,6 +54,15 @@ contract Orderbook is IOrderbook {
     );
     event OrderCleared();
 
+    struct Order {
+        Side side;
+        uint256 price;
+        uint256 amount;
+    }
+
+    Order[] bidLimits; // increasing order by price
+    Order[] askLimits; // decreasing order by price
+
     constructor(address _baseToken, address _quoteToken) {
         require(_baseToken != address(0), "baseToken=0");
         require(_quoteToken != address(0), "quoteToken=0");
@@ -75,7 +84,45 @@ contract Orderbook is IOrderbook {
         uint256 price,
         uint256 amount
     ) external returns (uint256) {
-        revert("NotImplemented");
+        if (side == Side.BUY) {
+            bidLimits.push(Order({side: side, price: price, amount: amount}));
+            uint256 curIdx = bidLimits.length - 1;
+            uint256 nextIdx;
+            Order memory temp; // TODO: don't use memory here, assign struct elements directly.
+            while (curIdx > 0) {
+                // Keep bubbling the new order down until the sorted invariant is met
+                // Last element is highest bid
+                nextIdx = curIdx - 1;
+                if (bidLimits[nextIdx].price > price) {
+                    temp = bidLimits[nextIdx];
+                    bidLimits[nextIdx] = bidLimits[curIdx];
+                    bidLimits[curIdx] = temp;
+                    curIdx--;
+                } else {
+                    break;
+                }
+            }
+            return bidLimits.length;
+        } else {
+            askLimits.push(Order({side: side, price: price, amount: amount}));
+            uint256 curIdx = askLimits.length - 1;
+            uint256 nextIdx;
+            Order memory temp;
+            while (curIdx > 0) {
+                // Keep bubbling the new order down until the sorted invariant is met
+                // Last element is lowest ask
+                nextIdx = curIdx - 1;
+                if (askLimits[nextIdx].price < price) {
+                    temp = askLimits[nextIdx];
+                    askLimits[nextIdx] = askLimits[curIdx];
+                    askLimits[curIdx] = temp;
+                    curIdx--;
+                } else {
+                    break;
+                }
+            }
+            return askLimits.length;
+        }
     }
 
     function placeMarketOrder(Side side, uint256 amount) external {
@@ -83,18 +130,25 @@ contract Orderbook is IOrderbook {
     }
 
     function clear() external {
-        revert("NotImplemented");
+        delete bidLimits;
+        delete askLimits;
     }
 
     function getBidsCount() external view returns (uint256) {
-        revert("NotImplemented");
+        return bidLimits.length;
     }
 
     function getAsksCount() external view returns (uint256) {
-        revert("NotImplemented");
+        return askLimits.length;
     }
 
     function getMidPrice() external view returns (uint256) {
-        revert("NotImplemented");
+        uint256 numBids = bidLimits.length;
+        uint256 numAsks = askLimits.length;
+        if (numBids == 0 || numAsks == 0) {
+            revert("Not enough bids or asks.");
+        }
+        return
+            (bidLimits[numBids - 1].price + askLimits[numAsks - 1].price) / 2;
     }
 }
