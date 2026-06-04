@@ -7,10 +7,17 @@ import {IOrderbook} from "./IOrderbook.sol";
 ///      implements all of these methods (plus `mint`).
 interface IERC20 {
     function transfer(address to, uint256 amount) external returns (bool);
-    function transferFrom(address from, address to, uint256 amount) external returns (bool);
+    function transferFrom(
+        address from,
+        address to,
+        uint256 amount
+    ) external returns (bool);
     function balanceOf(address account) external view returns (uint256);
     function approve(address spender, uint256 amount) external returns (bool);
-    function allowance(address owner, address spender) external view returns (uint256);
+    function allowance(
+        address owner,
+        address spender
+    ) external view returns (uint256);
 }
 
 /// @title Orderbook (template)
@@ -63,7 +70,11 @@ contract Orderbook is IOrderbook {
         return address(quoteToken);
     }
 
-    function placeLimitOrder(Side side, uint256 price, uint256 amount) external returns (uint256) {
+    function placeLimitOrder(
+        Side side,
+        uint256 price,
+        uint256 amount
+    ) external returns (uint256) {
         revert("NotImplemented");
     }
 
