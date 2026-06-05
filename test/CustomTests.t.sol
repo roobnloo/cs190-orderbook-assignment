@@ -57,11 +57,18 @@ contract OrderbookTestBasic is Test {
 
         assertEq(book.getAsksCount(), 2, "ask should rest");
         assertEq(book.getBidsCount(), 2, "bid should rest");
+        assertEq(quote.balanceOf(maker), 999_821 * ONE);
+        assertEq(quote.balanceOf(address(book)), 179 * ONE);
+        assertEq(base.balanceOf(maker), 998 * ONE);
+        assertEq(base.balanceOf(address(book)), 2 * ONE);
 
-        vm.prank(taker);
         book.clear();
         assertEq(book.getAsksCount(), 0, "asks should be cleared");
         assertEq(book.getBidsCount(), 0, "bids should be cleared");
+        assertEq(quote.balanceOf(maker), 1_000_000 * ONE);
+        assertEq(quote.balanceOf(address(book)), 0);
+        assertEq(base.balanceOf(maker), 1_000 * ONE);
+        assertEq(base.balanceOf(address(book)), 0);
     }
 
     function test_placeLimitOrderReturnsId() public {

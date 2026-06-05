@@ -218,6 +218,16 @@ contract Orderbook is IOrderbook {
     }
 
     function clear() external {
+        // Transfer all the book tokens to original makers and delete the orders
+        for (uint256 i = 0; i < bidLimits.length; i++) {
+            quoteToken.transfer(
+                bidLimits[i].maker,
+                bidLimits[i].amount * bidLimits[i].price
+            );
+        }
+        for (uint256 i = 0; i < askLimits.length; i++) {
+            baseToken.transfer(askLimits[i].maker, askLimits[i].amount);
+        }
         delete bidLimits;
         delete askLimits;
         nextLimitOrderId = 1;
