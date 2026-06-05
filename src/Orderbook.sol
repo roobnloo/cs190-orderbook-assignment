@@ -86,6 +86,9 @@ contract Orderbook is IOrderbook {
         uint256 price,
         uint256 amount
     ) external returns (uint256) {
+        if (amount == 0) {
+            revert("Cannot place limit order with zero amount.");
+        }
         if (side == Side.BUY) {
             bidLimits.push(
                 LimitOrder({
@@ -141,18 +144,83 @@ contract Orderbook is IOrderbook {
     }
 
     function placeMarketOrder(Side side, uint256 amount) external {
-        // uint256 curId;
-        // if (side == IOrderbook.Side.BUY) {
-        //     curId = askLimits.length - 1;
-        //     if (curId < 0) {
-        //         revert("No limit ask orders to trade against.");
-        //     }
-        //     while (curId >= 0) {
-        //         baseToken
-        //         curId--;
-        //     }
-        // }
-        revert("NotImplemented");
+        uint256 curId;
+        uint256 remaining = amount;
+        if (side == IOrderbook.Side.BUY) {
+            if (askLimits.length == 0) {
+                revert("No limit ask orders to trade against.");
+            }
+            while (remaining > 0 && askLimits.length > 0) {
+                curId = askLimits.length - 1;
+                if (askLimits[curId].amount >= remaining) {
+                    askLimits[curId].amount -= remaining;
+                    baseToken.transferFrom(
+                        askLimits[curId].maker,
+                        msg.sender,
+                        remaining
+                    );
+                    quoteToken.transferFrom(
+                        msg.sender,
+                        askLimits[curId].maker,
+                        remaining * askLimits[curId].price
+                    );
+                    remaining = 0;
+                    if (askLimits[curId].amount == 0) {
+                        askLimits.pop();
+                    }
+                } else {
+                    baseToken.transferFrom(
+                        askLimits[curId].maker,
+                        msg.sender,
+                        askLimits[curId].amount
+                    );
+                    quoteToken.transferFrom(
+                        msg.sender,
+                        askLimits[curId].maker,
+                        askLimits[curId].amount * askLimits[curId].price
+                    );
+                    remaining -= askLimits[curId].amount;
+                    askLimits.pop();
+                }
+            }
+        } else {
+            if (bidLimits.length == 0) {
+                revert("No limit bid orders to trade against.");
+            }
+            while (remaining > 0 && bidLimits.length > 0) {
+                curId = bidLimits.length - 1;
+                if (bidLimits[curId].amount >= remaining) {
+                    bidLimits[curId].amount -= remaining;
+                    baseToken.transferFrom(
+                        msg.sender,
+                        bidLimits[curId].maker,
+                        remaining
+                    );
+                    quoteToken.transferFrom(
+                        bidLimits[curId].maker,
+                        msg.sender,
+                        remaining * bidLimits[curId].price
+                    );
+                    remaining = 0;
+                    if (bidLimits[curId].amount == 0) {
+                        bidLimits.pop();
+                    }
+                } else {
+                    baseToken.transferFrom(
+                        msg.sender,
+                        bidLimits[curId].maker,
+                        bidLimits[curId].amount
+                    );
+                    quoteToken.transferFrom(
+                        bidLimits[curId].maker,
+                        msg.sender,
+                        bidLimits[curId].amount * bidLimits[curId].price
+                    );
+                    remaining -= bidLimits[curId].amount;
+                    bidLimits.pop();
+                }
+            }
+        }
     }
 
     function clear() external {

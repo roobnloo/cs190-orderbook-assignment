@@ -112,12 +112,43 @@ contract OrderbookTestBasic is Test {
         book.getMidPrice();
     }
 
-    function test_marketBuy() public {
+    function test_simpleMarketBuy() public {
         vm.prank(maker);
         book.placeLimitOrder(IOrderbook.Side.SELL, 100, ONE);
         assertEq(book.getAsksCount(), 1);
 
-        book.placeMarketOrder(IOrderbook.Side.SELL, ONE);
+        assertEq(base.balanceOf(maker), 1_000 * ONE);
+        assertEq(quote.balanceOf(maker), 1_000_000 * ONE);
+        assertEq(base.balanceOf(taker), 1_000 * ONE);
+        assertEq(quote.balanceOf(taker), 1_000_000 * ONE);
+
+        vm.prank(taker);
+        book.placeMarketOrder(IOrderbook.Side.BUY, ONE);
+
+        assertEq(base.balanceOf(maker), 999 * ONE);
+        assertEq(quote.balanceOf(maker), 1_000_100 * ONE);
+        assertEq(base.balanceOf(taker), 1_001 * ONE);
+        assertEq(quote.balanceOf(taker), 999_900 * ONE);
         assertEq(book.getAsksCount(), 0);
+    }
+
+    function test_simpleMarketSell() public {
+        vm.prank(maker);
+        book.placeLimitOrder(IOrderbook.Side.BUY, 100, ONE);
+        assertEq(book.getBidsCount(), 1);
+
+        assertEq(base.balanceOf(maker), 1_000 * ONE);
+        assertEq(quote.balanceOf(maker), 1_000_000 * ONE);
+        assertEq(base.balanceOf(taker), 1_000 * ONE);
+        assertEq(quote.balanceOf(taker), 1_000_000 * ONE);
+
+        vm.prank(taker);
+        book.placeMarketOrder(IOrderbook.Side.SELL, ONE);
+
+        assertEq(base.balanceOf(maker), 1_001 * ONE);
+        assertEq(quote.balanceOf(maker), 999_900 * ONE);
+        assertEq(base.balanceOf(taker), 999 * ONE);
+        assertEq(quote.balanceOf(taker), 1_000_100 * ONE);
+        assertEq(book.getBidsCount(), 0);
     }
 }
