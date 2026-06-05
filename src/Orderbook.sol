@@ -90,6 +90,8 @@ contract Orderbook is IOrderbook {
             revert("Cannot place limit order with zero amount.");
         }
         if (side == Side.BUY) {
+            // Lock amount quote from maker
+            quoteToken.transferFrom(msg.sender, address(this), amount * price);
             bidLimits.push(
                 LimitOrder({
                     maker: msg.sender,
@@ -115,6 +117,8 @@ contract Orderbook is IOrderbook {
                 }
             }
         } else {
+            // Lock amount base from maker
+            baseToken.transferFrom(msg.sender, address(this), amount);
             askLimits.push(
                 LimitOrder({
                     maker: msg.sender,
@@ -154,11 +158,7 @@ contract Orderbook is IOrderbook {
                 curId = askLimits.length - 1;
                 if (askLimits[curId].amount >= remaining) {
                     askLimits[curId].amount -= remaining;
-                    baseToken.transferFrom(
-                        askLimits[curId].maker,
-                        msg.sender,
-                        remaining
-                    );
+                    baseToken.transfer(msg.sender, remaining);
                     quoteToken.transferFrom(
                         msg.sender,
                         askLimits[curId].maker,
@@ -169,11 +169,7 @@ contract Orderbook is IOrderbook {
                         askLimits.pop();
                     }
                 } else {
-                    baseToken.transferFrom(
-                        askLimits[curId].maker,
-                        msg.sender,
-                        askLimits[curId].amount
-                    );
+                    baseToken.transfer(msg.sender, askLimits[curId].amount);
                     quoteToken.transferFrom(
                         msg.sender,
                         askLimits[curId].maker,
@@ -196,8 +192,7 @@ contract Orderbook is IOrderbook {
                         bidLimits[curId].maker,
                         remaining
                     );
-                    quoteToken.transferFrom(
-                        bidLimits[curId].maker,
+                    quoteToken.transfer(
                         msg.sender,
                         remaining * bidLimits[curId].price
                     );
@@ -211,8 +206,7 @@ contract Orderbook is IOrderbook {
                         bidLimits[curId].maker,
                         bidLimits[curId].amount
                     );
-                    quoteToken.transferFrom(
-                        bidLimits[curId].maker,
+                    quoteToken.transfer(
                         msg.sender,
                         bidLimits[curId].amount * bidLimits[curId].price
                     );

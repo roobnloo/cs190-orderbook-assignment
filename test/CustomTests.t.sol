@@ -129,7 +129,8 @@ contract OrderbookTestBasic is Test {
         book.placeLimitOrder(IOrderbook.Side.SELL, 100, ONE);
         assertEq(book.getAsksCount(), 1);
 
-        assertEq(base.balanceOf(maker), 1_000 * ONE);
+        assertEq(base.balanceOf(address(book)), ONE);
+        assertEq(base.balanceOf(maker), 999 * ONE);
         assertEq(quote.balanceOf(maker), 1_000_000 * ONE);
         assertEq(base.balanceOf(taker), 1_000 * ONE);
         assertEq(quote.balanceOf(taker), 1_000_000 * ONE);
@@ -137,6 +138,7 @@ contract OrderbookTestBasic is Test {
         vm.prank(taker);
         book.placeMarketOrder(IOrderbook.Side.BUY, ONE);
 
+        assertEq(base.balanceOf(address(book)), 0);
         assertEq(base.balanceOf(maker), 999 * ONE);
         assertEq(quote.balanceOf(maker), 1_000_100 * ONE);
         assertEq(base.balanceOf(taker), 1_001 * ONE);
@@ -149,14 +151,16 @@ contract OrderbookTestBasic is Test {
         book.placeLimitOrder(IOrderbook.Side.BUY, 100, ONE);
         assertEq(book.getBidsCount(), 1);
 
+        assertEq(quote.balanceOf(address(book)), 100 * ONE);
         assertEq(base.balanceOf(maker), 1_000 * ONE);
-        assertEq(quote.balanceOf(maker), 1_000_000 * ONE);
+        assertEq(quote.balanceOf(maker), 999_900 * ONE);
         assertEq(base.balanceOf(taker), 1_000 * ONE);
         assertEq(quote.balanceOf(taker), 1_000_000 * ONE);
 
         vm.prank(taker);
         book.placeMarketOrder(IOrderbook.Side.SELL, ONE);
 
+        assertEq(quote.balanceOf(address(book)), 0);
         assertEq(base.balanceOf(maker), 1_001 * ONE);
         assertEq(quote.balanceOf(maker), 999_900 * ONE);
         assertEq(base.balanceOf(taker), 999 * ONE);
@@ -173,7 +177,7 @@ contract OrderbookTestBasic is Test {
         book.placeLimitOrder(IOrderbook.Side.SELL, 100, ONE);
         assertEq(book.getAsksCount(), 3);
 
-        assertEq(base.balanceOf(maker), 1_000 * ONE);
+        assertEq(base.balanceOf(maker), 997 * ONE);
         assertEq(quote.balanceOf(maker), 1_000_000 * ONE);
         assertEq(base.balanceOf(taker), 1_000 * ONE);
         assertEq(quote.balanceOf(taker), 1_000_000 * ONE);
@@ -197,7 +201,7 @@ contract OrderbookTestBasic is Test {
         book.placeLimitOrder(IOrderbook.Side.SELL, 100, ONE);
         assertEq(book.getAsksCount(), 3);
 
-        assertEq(base.balanceOf(maker), 1_000 * ONE);
+        assertEq(base.balanceOf(maker), 997 * ONE);
         assertEq(quote.balanceOf(maker), 1_000_000 * ONE);
         assertEq(base.balanceOf(taker), 1_000 * ONE);
         assertEq(quote.balanceOf(taker), 1_000_000 * ONE);
@@ -221,10 +225,11 @@ contract OrderbookTestBasic is Test {
         book.placeLimitOrder(IOrderbook.Side.SELL, 100, ONE);
         vm.prank(maker);
         book.placeLimitOrder(IOrderbook.Side.SELL, 300, 10 * ONE);
+        vm.prank(maker);
         book.placeLimitOrder(IOrderbook.Side.SELL, 400, 10 * ONE);
         assertEq(book.getAsksCount(), 5);
 
-        assertEq(base.balanceOf(maker), 1_000 * ONE);
+        assertEq(base.balanceOf(maker), 977 * ONE);
         assertEq(quote.balanceOf(maker), 1_000_000 * ONE);
         assertEq(base.balanceOf(taker), 1_000 * ONE);
         assertEq(quote.balanceOf(taker), 1_000_000 * ONE);
@@ -232,7 +237,7 @@ contract OrderbookTestBasic is Test {
         vm.prank(taker);
         book.placeMarketOrder(IOrderbook.Side.BUY, 5 * ONE);
 
-        assertEq(base.balanceOf(maker), 995 * ONE);
+        assertEq(base.balanceOf(maker), 977 * ONE);
         assertEq(quote.balanceOf(maker), 1_001_000 * ONE);
         assertEq(base.balanceOf(taker), 1_005 * ONE);
         assertEq(quote.balanceOf(taker), 999_000 * ONE);
@@ -241,7 +246,7 @@ contract OrderbookTestBasic is Test {
         vm.prank(taker);
         book.placeMarketOrder(IOrderbook.Side.BUY, 8 * ONE);
 
-        assertEq(base.balanceOf(maker), 987 * ONE);
+        assertEq(base.balanceOf(maker), 977 * ONE);
         assertEq(quote.balanceOf(maker), 1_003_400 * ONE);
         assertEq(base.balanceOf(taker), 1_013 * ONE);
         assertEq(quote.balanceOf(taker), 996_600 * ONE);
@@ -258,7 +263,7 @@ contract OrderbookTestBasic is Test {
         assertEq(book.getBidsCount(), 3);
 
         assertEq(base.balanceOf(maker), 1_000 * ONE);
-        assertEq(quote.balanceOf(maker), 1_000_000 * ONE);
+        assertEq(quote.balanceOf(maker), 999_600 * ONE);
         assertEq(base.balanceOf(taker), 1_000 * ONE);
         assertEq(quote.balanceOf(taker), 1_000_000 * ONE);
 
@@ -270,5 +275,38 @@ contract OrderbookTestBasic is Test {
         assertEq(base.balanceOf(taker), 997 * ONE);
         assertEq(quote.balanceOf(taker), 1_000_400 * ONE);
         assertEq(book.getBidsCount(), 0);
+    }
+
+    function test_insuffMakerFund() public {
+        assertEq(base.balanceOf(maker), 1_000 * ONE);
+        assertEq(book.getAsksCount(), 0);
+
+        vm.prank(maker);
+        vm.expectRevert();
+        book.placeLimitOrder(IOrderbook.Side.SELL, 100, 1_001 * ONE);
+        assertEq(base.balanceOf(maker), 1_000 * ONE);
+        assertEq(book.getAsksCount(), 0);
+    }
+
+    function test_limitOrderTokenLock() public {
+        vm.prank(maker);
+        book.placeLimitOrder(IOrderbook.Side.SELL, 100, ONE);
+        vm.prank(maker);
+        book.placeLimitOrder(IOrderbook.Side.SELL, 400, 10 * ONE);
+
+        assertEq(book.getAsksCount(), 2);
+        assertEq(base.balanceOf(maker), 989 * ONE);
+        assertEq(quote.balanceOf(maker), 1_000_000 * ONE);
+        assertEq(base.balanceOf(address(book)), 11 * ONE);
+
+        vm.prank(maker);
+        book.placeLimitOrder(IOrderbook.Side.BUY, 100, ONE);
+        vm.prank(maker);
+        book.placeLimitOrder(IOrderbook.Side.BUY, 300, 10 * ONE);
+
+        assertEq(book.getBidsCount(), 2);
+        assertEq(base.balanceOf(maker), 989 * ONE);
+        assertEq(quote.balanceOf(maker), (1_000_000 - 3_100) * ONE);
+        assertEq(quote.balanceOf(address(book)), 3_100 * ONE);
     }
 }
