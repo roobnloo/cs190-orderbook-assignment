@@ -82,8 +82,8 @@ contract OrderbookTestBasic is Test {
         vm.prank(maker);
         assertEq(
             book.placeLimitOrder(IOrderbook.Side.BUY, 80, ONE),
-            1,
-            "id should be 1"
+            3,
+            "id should be 3"
         );
 
         book.clear();
@@ -110,5 +110,14 @@ contract OrderbookTestBasic is Test {
         book.clear();
         vm.expectRevert();
         book.getMidPrice();
+    }
+
+    function test_marketBuy() public {
+        vm.prank(maker);
+        book.placeLimitOrder(IOrderbook.Side.SELL, 100, ONE);
+        assertEq(book.getAsksCount(), 1);
+
+        book.placeMarketOrder(IOrderbook.Side.SELL, ONE);
+        assertEq(book.getAsksCount(), 0);
     }
 }

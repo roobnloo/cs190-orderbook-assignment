@@ -62,6 +62,7 @@ contract Orderbook is IOrderbook {
 
     Order[] bidLimits; // increasing order by price
     Order[] askLimits; // decreasing order by price
+    uint256 nextLimitOrderId = 1;
 
     constructor(address _baseToken, address _quoteToken) {
         require(_baseToken != address(0), "baseToken=0");
@@ -102,7 +103,6 @@ contract Orderbook is IOrderbook {
                     break;
                 }
             }
-            return bidLimits.length;
         } else {
             askLimits.push(Order({side: side, price: price, amount: amount}));
             uint256 curIdx = askLimits.length - 1;
@@ -121,8 +121,8 @@ contract Orderbook is IOrderbook {
                     break;
                 }
             }
-            return askLimits.length;
         }
+        return nextLimitOrderId++;
     }
 
     function placeMarketOrder(Side side, uint256 amount) external {
@@ -132,6 +132,7 @@ contract Orderbook is IOrderbook {
     function clear() external {
         delete bidLimits;
         delete askLimits;
+        nextLimitOrderId = 1;
     }
 
     function getBidsCount() external view returns (uint256) {
