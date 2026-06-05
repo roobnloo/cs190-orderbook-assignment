@@ -54,14 +54,15 @@ contract Orderbook is IOrderbook {
     );
     event OrderCleared();
 
-    struct Order {
+    struct LimitOrder {
+        address maker;
         Side side;
         uint256 price;
         uint256 amount;
     }
 
-    Order[] bidLimits; // increasing order by price
-    Order[] askLimits; // decreasing order by price
+    LimitOrder[] bidLimits; // increasing order by price
+    LimitOrder[] askLimits; // decreasing order by price
     uint256 nextLimitOrderId = 1;
 
     constructor(address _baseToken, address _quoteToken) {
@@ -86,10 +87,17 @@ contract Orderbook is IOrderbook {
         uint256 amount
     ) external returns (uint256) {
         if (side == Side.BUY) {
-            bidLimits.push(Order({side: side, price: price, amount: amount}));
+            bidLimits.push(
+                LimitOrder({
+                    maker: msg.sender,
+                    side: side,
+                    price: price,
+                    amount: amount
+                })
+            );
             uint256 curIdx = bidLimits.length - 1;
             uint256 nextIdx;
-            Order memory temp; // TODO: don't use memory here, assign struct elements directly.
+            LimitOrder memory temp; // TODO: don't use memory here, assign struct elements directly.
             while (curIdx > 0) {
                 // Keep bubbling the new order down until the sorted invariant is met
                 // Last element is highest bid
@@ -104,10 +112,17 @@ contract Orderbook is IOrderbook {
                 }
             }
         } else {
-            askLimits.push(Order({side: side, price: price, amount: amount}));
+            askLimits.push(
+                LimitOrder({
+                    maker: msg.sender,
+                    side: side,
+                    price: price,
+                    amount: amount
+                })
+            );
             uint256 curIdx = askLimits.length - 1;
             uint256 nextIdx;
-            Order memory temp;
+            LimitOrder memory temp;
             while (curIdx > 0) {
                 // Keep bubbling the new order down until the sorted invariant is met
                 // Last element is lowest ask
@@ -126,6 +141,17 @@ contract Orderbook is IOrderbook {
     }
 
     function placeMarketOrder(Side side, uint256 amount) external {
+        // uint256 curId;
+        // if (side == IOrderbook.Side.BUY) {
+        //     curId = askLimits.length - 1;
+        //     if (curId < 0) {
+        //         revert("No limit ask orders to trade against.");
+        //     }
+        //     while (curId >= 0) {
+        //         baseToken
+        //         curId--;
+        //     }
+        // }
         revert("NotImplemented");
     }
 
