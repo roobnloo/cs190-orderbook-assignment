@@ -102,7 +102,7 @@ contract Orderbook is IOrderbook {
             );
             uint256 curIdx = bidLimits.length - 1;
             uint256 nextIdx;
-            LimitOrder memory temp; // TODO: don't use memory here, assign struct elements directly.
+            LimitOrder memory temp;
             while (curIdx > 0) {
                 // Keep bubbling the new order down until the sorted invariant is met
                 // Last element is highest bid

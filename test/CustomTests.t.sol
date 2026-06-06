@@ -69,6 +69,14 @@ contract OrderbookTestBasic is Test {
         assertEq(quote.balanceOf(address(book)), 0);
         assertEq(base.balanceOf(maker), 1_000 * ONE);
         assertEq(base.balanceOf(address(book)), 0);
+
+        book.clear(); // Test clearing an empty book
+        assertEq(book.getAsksCount(), 0, "asks should be cleared");
+        assertEq(book.getBidsCount(), 0, "bids should be cleared");
+        assertEq(quote.balanceOf(maker), 1_000_000 * ONE);
+        assertEq(quote.balanceOf(address(book)), 0);
+        assertEq(base.balanceOf(maker), 1_000 * ONE);
+        assertEq(base.balanceOf(address(book)), 0);
     }
 
     function test_placeLimitOrderReturnsId() public {
@@ -315,5 +323,11 @@ contract OrderbookTestBasic is Test {
         assertEq(base.balanceOf(maker), 989 * ONE);
         assertEq(quote.balanceOf(maker), (1_000_000 - 3_100) * ONE);
         assertEq(quote.balanceOf(address(book)), 3_100 * ONE);
+    }
+
+    function test_placeLimitOrderZero() public {
+        vm.prank(maker);
+        vm.expectRevert();
+        book.placeLimitOrder(IOrderbook.Side.BUY, 100, 0);
     }
 }
