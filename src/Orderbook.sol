@@ -91,7 +91,7 @@ contract Orderbook is IOrderbook {
         }
         if (side == Side.BUY) {
             // Lock amount quote from maker
-            quoteToken.transferFrom(msg.sender, address(this), amount * price);
+            quoteToken.transferFrom(msg.sender, address(this), (amount * price) / 1e18);
             bidLimits.push(
                 LimitOrder({
                     maker: msg.sender,
@@ -107,7 +107,7 @@ contract Orderbook is IOrderbook {
                 // Keep bubbling the new order down until the sorted invariant is met
                 // Last element is highest bid
                 nextIdx = curIdx - 1;
-                if (bidLimits[nextIdx].price > price) {
+                if (bidLimits[nextIdx].price >= price) {
                     temp = bidLimits[nextIdx];
                     bidLimits[nextIdx] = bidLimits[curIdx];
                     bidLimits[curIdx] = temp;
@@ -134,7 +134,7 @@ contract Orderbook is IOrderbook {
                 // Keep bubbling the new order down until the sorted invariant is met
                 // Last element is lowest ask
                 nextIdx = curIdx - 1;
-                if (askLimits[nextIdx].price < price) {
+                if (askLimits[nextIdx].price <= price) {
                     temp = askLimits[nextIdx];
                     askLimits[nextIdx] = askLimits[curIdx];
                     askLimits[curIdx] = temp;
@@ -162,7 +162,7 @@ contract Orderbook is IOrderbook {
                     quoteToken.transferFrom(
                         msg.sender,
                         askLimits[curId].maker,
-                        remaining * askLimits[curId].price
+                        (remaining * askLimits[curId].price) / 1e18
                     );
                     remaining = 0;
                     if (askLimits[curId].amount == 0) {
@@ -173,7 +173,7 @@ contract Orderbook is IOrderbook {
                     quoteToken.transferFrom(
                         msg.sender,
                         askLimits[curId].maker,
-                        askLimits[curId].amount * askLimits[curId].price
+                        (askLimits[curId].amount * askLimits[curId].price) / 1e18
                     );
                     remaining -= askLimits[curId].amount;
                     askLimits.pop();
@@ -194,7 +194,7 @@ contract Orderbook is IOrderbook {
                     );
                     quoteToken.transfer(
                         msg.sender,
-                        remaining * bidLimits[curId].price
+                        (remaining * bidLimits[curId].price) / 1e18
                     );
                     remaining = 0;
                     if (bidLimits[curId].amount == 0) {
@@ -208,7 +208,7 @@ contract Orderbook is IOrderbook {
                     );
                     quoteToken.transfer(
                         msg.sender,
-                        bidLimits[curId].amount * bidLimits[curId].price
+                        (bidLimits[curId].amount * bidLimits[curId].price) / 1e18
                     );
                     remaining -= bidLimits[curId].amount;
                     bidLimits.pop();
@@ -222,7 +222,7 @@ contract Orderbook is IOrderbook {
         for (uint256 i = 0; i < bidLimits.length; i++) {
             quoteToken.transfer(
                 bidLimits[i].maker,
-                bidLimits[i].amount * bidLimits[i].price
+                (bidLimits[i].amount * bidLimits[i].price) / 1e18
             );
         }
         for (uint256 i = 0; i < askLimits.length; i++) {

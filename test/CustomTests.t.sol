@@ -17,6 +17,7 @@ contract OrderbookTestBasic is Test {
     Orderbook internal book;
 
     address internal maker = address(0xA11CE);
+    address internal maker2 = address(0xCAFE);
     address internal taker = address(0xB0B);
 
     uint256 internal constant ONE = 1e18;
@@ -30,6 +31,10 @@ contract OrderbookTestBasic is Test {
         base.mint(maker, 1_000 * ONE);
         quote.mint(maker, 1_000_000 * ONE);
 
+        // Second maker, used for price-time priority (FIFO) tests.
+        base.mint(maker2, 1_000 * ONE);
+        quote.mint(maker2, 1_000_000 * ONE);
+
         // Taker has both tokens so it can take both sides via market orders.
         base.mint(taker, 1_000 * ONE);
         quote.mint(taker, 1_000_000 * ONE);
@@ -37,6 +42,11 @@ contract OrderbookTestBasic is Test {
         vm.prank(maker);
         base.approve(address(book), type(uint256).max);
         vm.prank(maker);
+        quote.approve(address(book), type(uint256).max);
+
+        vm.prank(maker2);
+        base.approve(address(book), type(uint256).max);
+        vm.prank(maker2);
         quote.approve(address(book), type(uint256).max);
 
         vm.prank(taker);
@@ -47,13 +57,13 @@ contract OrderbookTestBasic is Test {
 
     function test_ClearOrderbook() public {
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.SELL, 100, ONE);
+        book.placeLimitOrder(IOrderbook.Side.SELL, 100 * ONE, ONE);
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.SELL, 101, ONE);
+        book.placeLimitOrder(IOrderbook.Side.SELL, 101 * ONE, ONE);
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.BUY, 80, ONE);
+        book.placeLimitOrder(IOrderbook.Side.BUY, 80 * ONE, ONE);
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.BUY, 99, ONE);
+        book.placeLimitOrder(IOrderbook.Side.BUY, 99 * ONE, ONE);
 
         assertEq(book.getAsksCount(), 2, "ask should rest");
         assertEq(book.getBidsCount(), 2, "bid should rest");
@@ -82,21 +92,21 @@ contract OrderbookTestBasic is Test {
     function test_placeLimitOrderReturnsId() public {
         vm.prank(maker);
         assertEq(
-            book.placeLimitOrder(IOrderbook.Side.SELL, 100, ONE),
+            book.placeLimitOrder(IOrderbook.Side.SELL, 100 * ONE, ONE),
             1,
             "id should be 1"
         );
 
         vm.prank(maker);
         assertEq(
-            book.placeLimitOrder(IOrderbook.Side.SELL, 101, ONE),
+            book.placeLimitOrder(IOrderbook.Side.SELL, 101 * ONE, ONE),
             2,
             "id should be 2"
         );
 
         vm.prank(maker);
         assertEq(
-            book.placeLimitOrder(IOrderbook.Side.BUY, 80, ONE),
+            book.placeLimitOrder(IOrderbook.Side.BUY, 80 * ONE, ONE),
             3,
             "id should be 3"
         );
@@ -105,7 +115,7 @@ contract OrderbookTestBasic is Test {
 
         vm.prank(maker);
         assertEq(
-            book.placeLimitOrder(IOrderbook.Side.SELL, 100, ONE),
+            book.placeLimitOrder(IOrderbook.Side.SELL, 100 * ONE, ONE),
             1,
             "id should be 1"
         );
@@ -113,14 +123,14 @@ contract OrderbookTestBasic is Test {
 
     function test_midPrice() public {
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.SELL, 100, ONE);
+        book.placeLimitOrder(IOrderbook.Side.SELL, 100 * ONE, ONE);
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.BUY, 98, ONE);
-        assertEq(book.getMidPrice(), 99);
+        book.placeLimitOrder(IOrderbook.Side.BUY, 98 * ONE, ONE);
+        assertEq(book.getMidPrice(), 99 * ONE);
 
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.BUY, 90, ONE);
-        assertEq(book.getMidPrice(), 99);
+        book.placeLimitOrder(IOrderbook.Side.BUY, 90 * ONE, ONE);
+        assertEq(book.getMidPrice(), 99 * ONE);
 
         book.clear();
         vm.expectRevert();
@@ -141,7 +151,7 @@ contract OrderbookTestBasic is Test {
 
     function test_simpleMarketBuy() public {
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.SELL, 100, ONE);
+        book.placeLimitOrder(IOrderbook.Side.SELL, 100 * ONE, ONE);
         assertEq(book.getAsksCount(), 1);
 
         assertEq(base.balanceOf(address(book)), ONE);
@@ -163,7 +173,7 @@ contract OrderbookTestBasic is Test {
 
     function test_simpleMarketSell() public {
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.BUY, 100, ONE);
+        book.placeLimitOrder(IOrderbook.Side.BUY, 100 * ONE, ONE);
         assertEq(book.getBidsCount(), 1);
 
         assertEq(quote.balanceOf(address(book)), 100 * ONE);
@@ -185,11 +195,11 @@ contract OrderbookTestBasic is Test {
 
     function test_marketBuyWithWalking() public {
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.SELL, 100, ONE);
+        book.placeLimitOrder(IOrderbook.Side.SELL, 100 * ONE, ONE);
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.SELL, 200, ONE);
+        book.placeLimitOrder(IOrderbook.Side.SELL, 200 * ONE, ONE);
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.SELL, 100, ONE);
+        book.placeLimitOrder(IOrderbook.Side.SELL, 100 * ONE, ONE);
         assertEq(book.getAsksCount(), 3);
 
         assertEq(base.balanceOf(maker), 997 * ONE);
@@ -209,11 +219,11 @@ contract OrderbookTestBasic is Test {
 
     function test_marketBuyMatchAble() public {
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.SELL, 100, ONE);
+        book.placeLimitOrder(IOrderbook.Side.SELL, 100 * ONE, ONE);
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.SELL, 200, ONE);
+        book.placeLimitOrder(IOrderbook.Side.SELL, 200 * ONE, ONE);
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.SELL, 100, ONE);
+        book.placeLimitOrder(IOrderbook.Side.SELL, 100 * ONE, ONE);
         assertEq(book.getAsksCount(), 3);
 
         assertEq(base.balanceOf(maker), 997 * ONE);
@@ -233,15 +243,15 @@ contract OrderbookTestBasic is Test {
 
     function test_marketBuyWalkingPartialFill() public {
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.SELL, 100, ONE);
+        book.placeLimitOrder(IOrderbook.Side.SELL, 100 * ONE, ONE);
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.SELL, 200, ONE);
+        book.placeLimitOrder(IOrderbook.Side.SELL, 200 * ONE, ONE);
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.SELL, 100, ONE);
+        book.placeLimitOrder(IOrderbook.Side.SELL, 100 * ONE, ONE);
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.SELL, 300, 10 * ONE);
+        book.placeLimitOrder(IOrderbook.Side.SELL, 300 * ONE, 10 * ONE);
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.SELL, 400, 10 * ONE);
+        book.placeLimitOrder(IOrderbook.Side.SELL, 400 * ONE, 10 * ONE);
         assertEq(book.getAsksCount(), 5);
 
         assertEq(base.balanceOf(maker), 977 * ONE);
@@ -270,11 +280,11 @@ contract OrderbookTestBasic is Test {
 
     function test_marketSellWalkingMatchAble() public {
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.BUY, 100, ONE);
+        book.placeLimitOrder(IOrderbook.Side.BUY, 100 * ONE, ONE);
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.BUY, 200, ONE);
+        book.placeLimitOrder(IOrderbook.Side.BUY, 200 * ONE, ONE);
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.BUY, 100, ONE);
+        book.placeLimitOrder(IOrderbook.Side.BUY, 100 * ONE, ONE);
         assertEq(book.getBidsCount(), 3);
 
         assertEq(base.balanceOf(maker), 1_000 * ONE);
@@ -298,16 +308,16 @@ contract OrderbookTestBasic is Test {
 
         vm.prank(maker);
         vm.expectRevert();
-        book.placeLimitOrder(IOrderbook.Side.SELL, 100, 1_001 * ONE);
+        book.placeLimitOrder(IOrderbook.Side.SELL, 100 * ONE, 1_001 * ONE);
         assertEq(base.balanceOf(maker), 1_000 * ONE);
         assertEq(book.getAsksCount(), 0);
     }
 
     function test_limitOrderTokenLock() public {
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.SELL, 100, ONE);
+        book.placeLimitOrder(IOrderbook.Side.SELL, 100 * ONE, ONE);
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.SELL, 400, 10 * ONE);
+        book.placeLimitOrder(IOrderbook.Side.SELL, 400 * ONE, 10 * ONE);
 
         assertEq(book.getAsksCount(), 2);
         assertEq(base.balanceOf(maker), 989 * ONE);
@@ -315,9 +325,9 @@ contract OrderbookTestBasic is Test {
         assertEq(base.balanceOf(address(book)), 11 * ONE);
 
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.BUY, 100, ONE);
+        book.placeLimitOrder(IOrderbook.Side.BUY, 100 * ONE, ONE);
         vm.prank(maker);
-        book.placeLimitOrder(IOrderbook.Side.BUY, 300, 10 * ONE);
+        book.placeLimitOrder(IOrderbook.Side.BUY, 300 * ONE, 10 * ONE);
 
         assertEq(book.getBidsCount(), 2);
         assertEq(base.balanceOf(maker), 989 * ONE);
@@ -328,6 +338,6 @@ contract OrderbookTestBasic is Test {
     function test_placeLimitOrderZero() public {
         vm.prank(maker);
         vm.expectRevert();
-        book.placeLimitOrder(IOrderbook.Side.BUY, 100, 0);
+        book.placeLimitOrder(IOrderbook.Side.BUY, 100 * ONE, 0);
     }
 }
